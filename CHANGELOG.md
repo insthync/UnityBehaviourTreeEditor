@@ -2,13 +2,75 @@
 
 All notable changes to this package will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+# [0.0.31] - WIP
+## Added
+- SubTree node styling + icon.
+- Added `Create SubTree` feature to node context menu.
+- Added `TabView` to the main panel. Tree views now open in a new tab. 
+- Close runtime tabs when exiting playmode.
+- Editor window state is now serialized. Previous tabs will be restored after closing and reopening the window.
+- New node script assets will be opened automatically in visual studio after compilation.
+- Added subtree section to node canvas context menu
+- Added New Subtree option to node canvas context menu
+- Snap new nodes created via context menu to the grid
+- Added Expand Subtree context menu option to subtree nodes
 
-Note this package is still in very early development and in high flux. 
+## Removed
+- Removed breadcrumbs from main panel toolbar. Replaced with tabs
+
+## Fixed
+- Blackboard key value property label not appearing on some nodes
+- Fixed node states in debugger when using subtrees
+- Double clicking a subtree node when in playmode will open tree instance instead of asset
+- [Opening BehaviourTree Editor causes error #15](https://github.com/thekiwicoder0/UnityBehaviourTreeEditor/issues/15)
+- [Chance of failure comparison](https://github.com/thekiwicoder0/UnityBehaviourTreeEditor/issues/9)
+- [Blackboard keys can now be deleted using the delete key](https://github.com/thekiwicoder0/UnityBehaviourTreeEditor/issues/2)
+
+# [0.0.30] - 01-06-2024
+## Changed
+- Runtime: Selector / Sequencer / Parallel nodes now actively tick all children rather than ticking from the previous child. 
+- Runtime: Added TickDelta to context object to support multiple tick modes
+- Nodes: RandomPosition min/max values expanded to vector3
+- Nodes: Parallel node now has a threshold property to determine how many children need to succeed before this node returns success.
+- Editor: Behaviour Tree menu item is now accessed under `Window -> AI -> Behaviour Tree` to conform with standard Unity tools
+- Editor: Grid snap size is now 225 by default. 
+- Editor: Populate GameObject behaviour tree instances to asset selector while in play mode
+- Editor: Improved debugger performance when inspecting an active tree.
+
+## Added
+- Runtime: Conditional Nodes. Specialisation of an ActionNode which returns true/false. Has built in node option for negating the condition
+- Runtime: BehaviourTreeInstance.ManualTick() function to control behaviour tree tick manually
+- Runtime: BehaviourTreeInstance.StartBehaviour() function to manually start a behaviour
+- Runtime: TickMode to control when the tree is ticked (update/fixedupdate/lateupdate/manual)
+- Runtime: StartMode to control when the tree is started (awake/onenable/start/manual)
+- Runtime: Unity profile markers for runtime and editor
+- ProjectSettings: grid snap size to project settings
+- ProjectSettings: autoSelectNodeHierarchy option to enable subtree selection by default
+- Editor: Added icons to nodes on canvas 
+
+## Removed
+
+- Runtime: Removed Switch Node
+- Runtime: Removed Interrupt Selector Node
+- Runtime: Removed Random Selector Node
+
+# [0.0.21] - 02-05-2024
+
+### Changed
+- Updated behaviour tree view classes to use [UXmlElement] attribute instead of deprecated uxml factory / traits
+
+# [0.0.20] - 29-11-2023
+
+### Added
+- N/A
+
+### Changed
+- Improved Open Behaviour Tree dialog menu
+
+### Fixed
+- BlackboardKey 'Delete' context menu option now appears when clicking anywhere within the row
 
 # [0.0.19] - 27-03-2023
-
-## Update 19
 
 - Restructured repository to contain just the package rather than the project. Installation URL is now just https://github.com/thekiwicoder0/UnityBehaviourTreeEditor.git
 - Increased node text size slightly and center aligned
@@ -16,8 +78,6 @@ Note this package is still in very early development and in high flux.
 - Use GraphElement.Capabilities to disable node snapping rather than editor prefs
 
 # [0.0.18] - 09-03-2023
-
-## Update 18
 
 - Blackboard Keys can now be renamed by double clicking on the blackboard key label
 - Nodes can be copy, pasted, and duplicated in the tree view

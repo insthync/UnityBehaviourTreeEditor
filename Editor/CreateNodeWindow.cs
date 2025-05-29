@@ -26,15 +26,21 @@ namespace TheKiwiCoder {
                     }
                     return BehaviourTreeEditorWindow.Instance.scriptTemplateActionNode;
                 case 1:
+                    if (projectSettings.scriptTemplateConditionNode) {
+                        return projectSettings.scriptTemplateConditionNode;
+                    }
+                    return BehaviourTreeEditorWindow.Instance.scriptTemplateConditionNode;
+                case 2:
                     if (projectSettings.scriptTemplateCompositeNode) {
                         return projectSettings.scriptTemplateCompositeNode;
                     }
                     return BehaviourTreeEditorWindow.Instance.scriptTemplateCompositeNode;
-                case 2:
+                case 3:
                     if (projectSettings.scriptTemplateDecoratorNode) {
                         return projectSettings.scriptTemplateDecoratorNode;
                     }
                     return BehaviourTreeEditorWindow.Instance.scriptTemplateDecoratorNode;
+
             }
             Debug.LogError("Unhandled script template type:" + type);
             return null;
@@ -51,8 +57,9 @@ namespace TheKiwiCoder {
 
             scriptFileAssets = new EditorUtility.ScriptTemplate[] {
                 new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(0), defaultFileName = "NewActionNode", subFolder = "Actions" },
-                new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(1), defaultFileName = "NewCompositeNode", subFolder = "Composites" },
-                new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(2), defaultFileName = "NewDecoratorNode", subFolder = "Decorators" },
+                new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(1), defaultFileName = "NewConditionNode", subFolder = "Conditions" },
+                new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(2), defaultFileName = "NewCompositeNode", subFolder = "Composites" },
+                new EditorUtility.ScriptTemplate { templateFile = GetScriptTemplate(3), defaultFileName = "NewDecoratorNode", subFolder = "Decorators" },
             };
         }
 
@@ -64,13 +71,26 @@ namespace TheKiwiCoder {
             };
 
             // Action nodes can only be added as children
-            if (isSourceParent || source == null)
-            {
+            if (isSourceParent || source == null) {
                 tree.Add(new SearchTreeGroupEntry(new GUIContent("Actions")) { level = 1 });
                 var types = TypeCache.GetTypesDerivedFrom<ActionNode>();
                 foreach (var type in types) {
+
+                    // Ignore condition types
+                    if (!type.IsSubclassOf(typeof(ConditionNode))) {
+                        System.Action invoke = () => CreateNode(type, context);
+                        tree.Add(new SearchTreeEntry(new GUIContent($"{type.Name}")) { level = 2, userData = invoke });
+                    }
+                }
+            }
+
+            // Condition nodes can only be added as children
+            if (isSourceParent || source == null) {
+                tree.Add(new SearchTreeGroupEntry(new GUIContent("Conditions")) { level = 1 });
+                var types = TypeCache.GetTypesDerivedFrom<ConditionNode>();
+                foreach (var type in types) {
                     System.Action invoke = () => CreateNode(type, context);
-                    tree.Add(new SearchTreeEntry(new GUIContent($"{type.Name}")) {level = 2,userData = invoke });
+                    tree.Add(new SearchTreeEntry(new GUIContent($"{type.Name}")) { level = 2, userData = invoke });
                 }
             }
 
@@ -91,22 +111,56 @@ namespace TheKiwiCoder {
                     var types = TypeCache.GetTypesDerivedFrom<DecoratorNode>();
                     foreach (var type in types) {
                         System.Action invoke = () => CreateNode(type, context);
-                        tree.Add(new SearchTreeEntry(new GUIContent($"{type.Name}")) {level = 2, userData = invoke});
+                        tree.Add(new SearchTreeEntry(new GUIContent($"{type.Name}")) { level = 2, userData = invoke });
                     }
                 }
             }
 
             {
-                tree.Add(new SearchTreeGroupEntry(new GUIContent("New Script...")) { level = 1 });
+                tree.Add(new SearchTreeGroupEntry(new GUIContent("Subtrees")) { level = 1 });
+                {
+                    var behaviourTrees = EditorUtility.GetAssetPaths<BehaviourTree>();
+                    behaviourTrees.ForEach(path => {
+                        var fileName = System.IO.Path.GetFileName(path);
+
+                        System.Action invoke = () => {
+                            var tree = AssetDatabase.LoadAssetAtPath<BehaviourTree>(path);
+                            var subTreeNodeView = CreateNode(typeof(SubTree), context);
+                            SubTree subtreeNode = subTreeNodeView.node as SubTree;
+                            subtreeNode.treeAsset = tree;
+                        };
+                        tree.Add(new SearchTreeEntry(new GUIContent($"{fileName}")) { level = 2, userData = invoke });
+                    });
+                }
+            }
+
+            {
+
+                tree.Add(new SearchTreeGroupEntry(new GUIContent("New Script ...")) { level = 1 });
 
                 System.Action createActionScript = () => CreateScript(scriptFileAssets[0], context);
                 tree.Add(new SearchTreeEntry(new GUIContent($"New Action Script")) { level = 2, userData = createActionScript });
 
-                System.Action createCompositeScript = () => CreateScript(scriptFileAssets[1], context);
+                System.Action createConditionScript = () => CreateScript(scriptFileAssets[1], context);
+                tree.Add(new SearchTreeEntry(new GUIContent($"New Condition Script")) { level = 2, userData = createConditionScript });
+
+                System.Action createCompositeScript = () => CreateScript(scriptFileAssets[2], context);
                 tree.Add(new SearchTreeEntry(new GUIContent($"New Composite Script")) { level = 2, userData = createCompositeScript });
 
-                System.Action createDecoratorScript = () => CreateScript(scriptFileAssets[2], context);
+                System.Action createDecoratorScript = () => CreateScript(scriptFileAssets[3], context);
                 tree.Add(new SearchTreeEntry(new GUIContent($"New Decorator Script")) { level = 2, userData = createDecoratorScript });
+            }
+
+            {
+                System.Action invoke = () => {
+                    var newTree = EditorUtility.CreateNewTree();
+                    if (newTree) {
+                        var subTreeNodeView = CreateNode(typeof(SubTree), context);
+                        SubTree subtreeNode = subTreeNodeView.node as SubTree;
+                        subtreeNode.treeAsset = newTree;
+                    }
+                };
+                tree.Add(new SearchTreeEntry(new GUIContent("     New Subtree ...")) { level = 1, userData = invoke });
             }
 
 
@@ -119,13 +173,16 @@ namespace TheKiwiCoder {
             return true;
         }
 
-        public void CreateNode(System.Type type, SearchWindowContext context) {
+        public NodeView CreateNode(System.Type type, SearchWindowContext context) {
             BehaviourTreeEditorWindow editorWindow = BehaviourTreeEditorWindow.Instance;
-            
+
             var windowMousePosition = editorWindow.rootVisualElement.ChangeCoordinatesTo(editorWindow.rootVisualElement.parent, context.screenMousePosition - editorWindow.position.position);
-            var graphMousePosition = editorWindow.treeView.contentViewContainer.WorldToLocal(windowMousePosition);
+            var graphMousePosition = editorWindow.CurrentTreeView.contentViewContainer.WorldToLocal(windowMousePosition);
             var nodeOffset = new Vector2(-75, -20);
             var nodePosition = graphMousePosition + nodeOffset;
+
+            nodePosition.x = EditorUtility.SnapTo(nodePosition.x, editorWindow.settings.gridSnapSizeX);
+            nodePosition.y = EditorUtility.SnapTo(nodePosition.y, editorWindow.settings.gridSnapSizeY);
 
             // #TODO: Unify this with CreatePendingScriptNode
             NodeView createdNode;
@@ -140,13 +197,14 @@ namespace TheKiwiCoder {
             }
 
             treeView.SelectNode(createdNode);
+            return createdNode;
         }
 
         public void CreateScript(EditorUtility.ScriptTemplate scriptTemplate, SearchWindowContext context) {
             BehaviourTreeEditorWindow editorWindow = BehaviourTreeEditorWindow.Instance;
 
             var windowMousePosition = editorWindow.rootVisualElement.ChangeCoordinatesTo(editorWindow.rootVisualElement.parent, context.screenMousePosition - editorWindow.position.position);
-            var graphMousePosition = editorWindow.treeView.contentViewContainer.WorldToLocal(windowMousePosition);
+            var graphMousePosition = editorWindow.CurrentTreeView.contentViewContainer.WorldToLocal(windowMousePosition);
             var nodeOffset = new Vector2(-75, -20);
             var nodePosition = graphMousePosition + nodeOffset;
 
@@ -156,7 +214,7 @@ namespace TheKiwiCoder {
         public static void Show(Vector2 mousePosition, NodeView source, bool isSourceParent = false) {
             Vector2 screenPoint = GUIUtility.GUIToScreenPoint(mousePosition);
             CreateNodeWindow searchWindowProvider = ScriptableObject.CreateInstance<CreateNodeWindow>();
-            searchWindowProvider.Initialise(BehaviourTreeEditorWindow.Instance.treeView, source, isSourceParent);
+            searchWindowProvider.Initialise(BehaviourTreeEditorWindow.Instance.CurrentTreeView, source, isSourceParent);
             SearchWindowContext windowContext = new SearchWindowContext(screenPoint, 240, 320);
             SearchWindow.Open(windowContext, searchWindowProvider);
         }

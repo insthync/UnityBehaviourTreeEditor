@@ -7,6 +7,8 @@ using UnityEditor;
 using UnityEngine;
 
 namespace TheKiwiCoder {
+
+    // This is a WIP class for generating behaviour trees dynamically at runtime.
     public class BehaviourTreeBuilder {
 
         public BehaviourTree tree;
@@ -18,7 +20,7 @@ namespace TheKiwiCoder {
 
         public T CreateNode<T>(params object[] args) where T : Node {
             T newNode = Activator.CreateInstance(typeof(T), args) as T;
-            newNode.guid = GUID.Generate().ToString();
+            newNode.guid = Guid.NewGuid().ToString();
             tree.nodes.Add(newNode);
             return newNode;
         }
@@ -57,6 +59,7 @@ namespace TheKiwiCoder {
             return totalWidth;
         }
 
+#if UNITY_EDITOR
         public void Save(string path) {
             if (tree) {
                 LayoutNodes();
@@ -64,6 +67,7 @@ namespace TheKiwiCoder {
                 AssetDatabase.SaveAssets();
             }
         }
+#endif
     }
 }
 #endif

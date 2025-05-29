@@ -9,7 +9,7 @@ namespace TheKiwiCoder {
 
     [CustomPropertyDrawer(typeof(BlackboardKey))]
     public class BlackboardKeyPropertyDrawer : PropertyDrawer {
-    
+
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             if (property.propertyType != SerializedPropertyType.ArraySize) {
 
@@ -32,8 +32,9 @@ namespace TheKiwiCoder {
                 keyValue.label = "";
                 keyValue.style.flexGrow = 1.0f;
                 keyValue.bindingPath = nameof(BlackboardKey<object>.value);
-                keyValue.AddManipulator(new ContextualMenuManipulator((evt) => {
-                    evt.menu.AppendAction("Delete", (x) => BehaviourTreeEditorWindow.Instance.serializer.DeleteBlackboardKey(property.displayName), DropdownMenuAction.AlwaysEnabled);
+
+                container.AddManipulator(new ContextualMenuManipulator((evt) => {
+                    evt.menu.AppendAction("Delete", (x) => BehaviourTreeEditorWindow.Instance.CurrentSerializer.DeleteBlackboardKey(property.displayName), DropdownMenuAction.AlwaysEnabled);
                 }));
 
                 container.style.flexDirection = FlexDirection.Row;
@@ -42,7 +43,7 @@ namespace TheKiwiCoder {
                 container.Add(keyValue);
 
                 keyName.RegisterCallback<MouseDownEvent>((evt) => {
-                    if(evt.clickCount == 2) {
+                    if (evt.clickCount == 2) {
                         renameField.value = keyName.text;
                         renameField.style.display = DisplayStyle.Flex;
                         renameField.Focus();

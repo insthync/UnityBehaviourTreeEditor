@@ -12,7 +12,6 @@ namespace TheKiwiCoder {
             Success
         }
 
-        [HideInInspector] public State state = State.Running;
         [HideInInspector] public bool started = false;
         [HideInInspector] public string guid = System.Guid.NewGuid().ToString();
         [HideInInspector] public Vector2 position;
@@ -20,8 +19,8 @@ namespace TheKiwiCoder {
         [HideInInspector] public Blackboard blackboard;
         [TextArea] public string description;
         [Tooltip("When enabled, the nodes OnDrawGizmos will be invoked")] public bool drawGizmos = false;
-        
-        public virtual void OnInit() { 
+
+        public virtual void OnInit() {
             // Nothing to do here
         }
 
@@ -32,7 +31,9 @@ namespace TheKiwiCoder {
                 started = true;
             }
 
-            state = OnUpdate();
+            var state = OnUpdate();
+
+            context.tickResults[guid] = state;
 
             if (state != State.Running) {
                 OnStop();
@@ -45,7 +46,6 @@ namespace TheKiwiCoder {
         public void Abort() {
             BehaviourTree.Traverse(this, (node) => {
                 node.started = false;
-                node.state = State.Running;
                 node.OnStop();
             });
         }
@@ -55,5 +55,28 @@ namespace TheKiwiCoder {
         protected abstract void OnStart();
         protected abstract void OnStop();
         protected abstract State OnUpdate();
+
+        protected virtual void Log(string message) {
+            Debug.Log($"[{GetType()}]{message}");
+        }
+
+        public Node Clone() {
+            var clone = MemberwiseClone() as Node;
+
+            // Only clone this node. Child references will be cleared
+            if (clone is DecoratorNode decorator && decorator.child != null) {
+                decorator.child = null;
+            }
+
+            if (clone is RootNode rootNode && rootNode.child != null) {
+                rootNode.child = null;
+            }
+
+            if (clone is CompositeNode composite) {
+                composite.children = new List<Node>();
+            }
+
+            return clone;
+        }
     }
 }
